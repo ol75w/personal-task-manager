@@ -1,5 +1,83 @@
+import json
+
 tasks = []
 next_id = 1
+FILE_NAME = "personal-task.json"
+
+
+def load_task():
+    global tasks, next_id
+
+    try:
+        with open(FILE_NAME, "r") as file:
+            loaded_tasks = json.load(file)
+
+        if not isinstance(loaded_tasks, list):
+            print("Error: Task data must be a list!")
+            return
+
+        for task in loaded_tasks:
+            if not isinstance(task, dict):
+                print("Error: Invalid task format!")
+                return
+
+            required_keys = ["id", "title", "priority", "completed"]
+
+            if not all(key in task for key in required_keys):
+                print("Error: A task is missing required fields!")
+                return
+
+            if not isinstance(task["id"], int) or isinstance(task["id"], bool) or task["id"] < 1:
+                print("Error: Invalid task ID!")
+                return
+
+            if not isinstance(task["title"], str) or not task["title"].strip():
+                print("Error: Invalid task title!")
+                return
+
+            if task["priority"] not in ["Low", "Medium", "High"]:
+                print("Error: Invalid task priority!")
+                return
+
+            if not isinstance(task["completed"], bool):
+                print("Error: Invalid task status!")
+                return
+
+        ids = [task["id"] for task in loaded_tasks]
+
+        if len(ids) != len(set(ids)):
+            print("Error: Duplicate task IDs found!")
+            return
+
+        tasks = loaded_tasks
+
+        if tasks:
+            next_id = max(task["id"] for task in tasks) + 1
+        else:
+            next_id = 1
+
+        print("Tasks loaded successfully!")
+
+    except FileNotFoundError:
+        tasks = []
+        next_id = 1
+        print("No saved tasks found. Starting fresh!")
+
+    except json.JSONDecodeError:
+        print("Error: The JSON file is corrupted. Existing file preserved.")
+
+    except OSError as error:
+        print(f"Error reading task file: {error}")
+
+def save_task():
+    try:
+        with open(FILE_NAME, "w") as file:
+            json.dump(tasks, file, indent=4)
+        return True
+
+    except OSError as error:
+        print(f"Error saving tasks: {error}")
+        return False
 
 def add_task():
     global next_id
@@ -30,6 +108,7 @@ def add_task():
     print(f"{title} added successfully!")
     print(f"Task id: {next_id}")
 
+    save_task()
     next_id += 1
 
 
@@ -68,10 +147,11 @@ def mark_complete():
             else:
                 task["completed"] = True
                 print(f"Task '{task['title']}' marked as complete!")
+                save_task()
             return
 
     print("Task ID not found!")
-
+    
 
 
 def update_task():
@@ -118,13 +198,14 @@ def update_task():
 
             if choice in ["1", "2", "3"]:
                 print("Task updated successfully!")
+                save_task()
             else:
                 print("Invalid choice!")
 
             return
 
     print("Task ID not found!")
-
+    
 
 
 
@@ -152,6 +233,7 @@ def delete_task():
             if confirm == "y":
                 tasks.remove(task)
                 print("Task deleted successfully!")
+                save_task()
             elif confirm == "n":
                 print("Deletion cancelled!")
             else:
@@ -193,7 +275,7 @@ def search_task():
     if not found:
         print("No matching tasks found!")
 
-
+load_task()
 while True:
 
     print("====Task Menu=====")
